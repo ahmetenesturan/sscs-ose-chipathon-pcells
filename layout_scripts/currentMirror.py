@@ -6,9 +6,13 @@ from glayout.flow.pdk.util.comp_utils import prec_ref_center, movey, evaluate_bb
 from glayout.flow.routing.smart_route import smart_route
 from glayout.flow.routing.c_route import c_route
 
+from glayout.flow.placement.common_centroid_ab_ba import common_centroid_ab_ba
+from glayout.flow.blocks.current_mirror import current_mirror
+from glayout.flow.blocks.opamp import opamp
+
 from glayout.flow.pdk.sky130_mapped import sky130_mapped_pdk
 
-def CurrentMirror(pdk: MappedPDK, width, length, type):
+def CurrentMirror_interdig(pdk: MappedPDK, width, length, type):
     CurrentMirror = Component(name="CurrentMirror")
     if type == "pfet":
         currm = two_pfet_interdigitized(pdk, numcols=2, dummy=True, with_substrate_tap=False, with_tie=True, width=width, length=length, rmult=1)
@@ -22,4 +26,19 @@ def CurrentMirror(pdk: MappedPDK, width, length, type):
     CurrentMirror << smart_route(pdk,CurrentMirror.ports["currm_A_source_E"], CurrentMirror.ports["currm_B_source_E"],currm_ref,CurrentMirror)
     return CurrentMirror
 
+def CurrentMirror(pdk: MappedPDK, width, length, type):
+    CurrentMirror = Component(name="CurrentMirror")
+    if type == "pfet":
+        currm = common_centroid_ab_ba(pdk, width=width, length=length)
+    elif type == "nfet":
+        currm = two_nfet_interdigitized(pdk, numcols=2, dummy=True, with_substrate_tap=False, with_tie=True, width=width, length=length, rmult=1)
+    currm_ref = prec_ref_center(currm)
+    CurrentMirror.add(currm_ref)
+    CurrentMirror.add_ports(currm_ref.get_ports_list(), prefix="currm_")
+    #CurrentMirror << smart_route(pdk,CurrentMirror.ports["currm_A_gate_E"], CurrentMirror.ports["currm_B_gate_E"],currm_ref,CurrentMirror)
+    #CurrentMirror << smart_route(pdk,CurrentMirror.ports["currm_A_drain_E"], CurrentMirror.ports["currm_A_gate_E"],currm_ref,CurrentMirror)
+    #CurrentMirror << smart_route(pdk,CurrentMirror.ports["currm_A_source_E"], CurrentMirror.ports["currm_B_source_E"],currm_ref,CurrentMirror)
+    return CurrentMirror
+
+#CurrentMirror_interdig(sky130_mapped_pdk, 2, 2, "pfet").show()
 CurrentMirror(sky130_mapped_pdk, 2, 2, "pfet").show()
